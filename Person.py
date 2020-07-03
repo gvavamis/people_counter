@@ -13,6 +13,7 @@ class MyPerson:
             self.rect = []
         else:
             self.rect = rect
+
         self.down_limit = down_limit
         self.up_limit = up_limit
         self.line_down = line_down
@@ -75,7 +76,7 @@ class MyPerson:
         if frame_id:
             self.frame_id = frame_id
 
-        self.rect =rect
+        self.rect = rect
 
         # self.age = 0
 

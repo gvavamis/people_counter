@@ -16,10 +16,16 @@ def dist(A, B):
     return math.sqrt((A[0] - B[0]) ** 2 + (A[1] - B[1]) ** 2)
 
 
+def calc_r(rect, div=1):
+    xlen = int((rect[2] - rect[0]) / div)
+    ylen = int((rect[3] - rect[1]) / div)
+    return rect[0] - xlen, rect[1] - ylen, rect[2] + xlen, rect[0] + ylen
+
+
 class PeopleCounter():
 
     def __init__(self, cap=0, in_direction='D', logfile_path='', people_in=0, upper_padding=1):
-        self.mtp = 2 # epi poso tha einai pio megalo to kathe tetragono wste na ginei upoparathiro
+        self.mtp = 2  # epi poso tha einai pio megalo to kathe tetragono wste na ginei upoparathiro
         WORKING_DIR = os.path.abspath(__file__)
         self.WORKING_DIR = WORKING_DIR[:len(WORKING_DIR) - len(WORKING_DIR.split('\\')[-1])]
         self.IN_DIRECTION = in_direction
@@ -34,7 +40,7 @@ class PeopleCounter():
         self.confidence = 0.1
         self.net = cv2.dnn.readNetFromCaffe(prototxt, model)
         if self.IN_DIRECTION == 'D':
-             self.OUT_DIRECTION = 'U'
+            self.OUT_DIRECTION = 'U'
         elif self.IN_DIRECTION == 'U':
             self.OUT_DIRECTION = 'D'
         else:
@@ -61,7 +67,10 @@ class PeopleCounter():
         self.w_resize = 1
 
         self.Vheight = int(self.CAP.get(cv2.CAP_PROP_FRAME_HEIGHT))  # *self.upper_padding)
-        self.Vwidth = 500 #int(self.CAP.get(cv2.CAP_PROP_FRAME_WIDTH))
+        self.Vwidth = int(self.CAP.get(cv2.CAP_PROP_FRAME_WIDTH))
+
+        # if self.Vwidth > 500:
+        #     self.Vwidth = 500
 
         if self.upper_padding == 1:
             self.ofset = 0
@@ -70,15 +79,15 @@ class PeopleCounter():
 
         frameArea = self.Vheight * self.Vwidth
         self.THRESSHOLD_AREA = frameArea * 250 / 307200
-        self.dist_thress = 10
+        self.dist_thress = 30
 
         print('THRESSHOLD_AREA THRESSHOLD_AREA THRESSHOLD_AREA')
         print(self.THRESSHOLD_AREA)
 
-        self.line_up = int(4 * (self.Vheight / 8))  # +self.ofset
-        self.line_down = int(6 * (self.Vheight / 8))  # +self.ofset
-        self.up_limit = int(2 * (self.Vheight / 8))  # +self.ofset
-        self.down_limit = int(8 * (self.Vheight / 8))  # +self.ofset
+        self.line_up = int(7 * (self.Vheight / 10))  # +self.ofset
+        self.line_down = int(8 * (self.Vheight / 10))  # +self.ofset
+        self.up_limit = int(6 * (self.Vheight / 10))  # +self.ofset
+        self.down_limit = int(9 * (self.Vheight / 10))  # +self.ofset
 
         # print(self.Vheight)
         # print('---------------')
@@ -86,7 +95,8 @@ class PeopleCounter():
         # print(self.line_down)
         # print(self.up_limit)
         # print(self.down_limit)
-
+        # input()
+        #
         self.line_down_color = (255, 0, 0)
         self.line_up_color = (0, 0, 255)
 
@@ -187,9 +197,11 @@ class PeopleCounter():
         # image = cv2.resize(image, (0, 0), fx=scale, fy=scale)
         cv2.imshow('LIVE', image)
 
-    def find_center(self,rectangle):
-        center = int((rectangle[2]-rectangle[0])/2)+rectangle[0], int((rectangle[3]-rectangle[1])/2)+rectangle[1]
+    def find_center(self, rectangle):
+        center = int((rectangle[2] - rectangle[0]) / 2) + rectangle[0], int((rectangle[3] - rectangle[1]) / 2) + \
+                 rectangle[1]
         return center
+
     def run(self):
         background = cv2.createBackgroundSubtractorMOG2(detectShadows=True)
 
@@ -206,7 +218,7 @@ class PeopleCounter():
             print('frame: ', frame_id)
             to_remove = []
             ret, frame = self.CAP.read()
-            frame = imutils.resize(frame, width=500)
+            frame = imutils.resize(frame, width=self.Vwidth)
             # rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             output_frame = frame.copy()
             # frame = cv2.resize(frame, (0, 0), fx=self.w_resize, fy=self.h_resize)
@@ -234,23 +246,23 @@ class PeopleCounter():
                 print('DOWN:', self.count_down)
                 break
 
-
             # ARXH TOU ALGORUTHMOU
 
-
             temp = people.copy()
-            print(len(people))
+            print('people', len(people))
+            to_append = []
             while len(temp):
                 this_person = temp.pop()
-                print(this_person.is_done())
+                to_append = []
+                # print(this_person.is_done())
                 if this_person.is_done():
                     continue
                 # for this_person in people:
 
                 startX, startY, endX, endY = this_person.getRect()
                 cntr = self.find_center((startX, startY, endX, endY))
-                Xlen= (endX-startX) * self.mtp
-                Ylen= (endY-startY) * self.mtp
+                Xlen = (endX - startX) * self.mtp
+                Ylen = (endY - startY) * self.mtp
                 # Xlen = w * mtp
                 # Ylen = h * mtp
                 xExtra = int(Xlen / 2)
@@ -275,18 +287,18 @@ class PeopleCounter():
 
                 temp_mask = mask2[A: B, C: D]
                 temp_frame = frame[A: B, C: D]
-                cv2.imshow('temp_frame',temp_frame)
-                print('ppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp')
+                cv2.imshow('temp_frame', temp_frame)
                 k = cv2.waitKey(30) & 0xff
                 if k == ord('c'):
                     cv2.destroyWindow(temp_frame)
                 output_frame = cv2.rectangle(output_frame, (C, A), (D, B), (0, 255, 255), 2)
-                blob = cv2.dnn.blobFromImage(temp_frame, 0.007843, (D-C, B-A), 127.5)
+                blob = cv2.dnn.blobFromImage(temp_frame, 1, (D - C, B - A), 127.5)
+                # blob = cv2.dnn.blobFromImage(temp_frame, 0.007843, (D-C, B-A), 127.5)
                 self.net.setInput(blob)
                 detections = self.net.forward()
 
-                print('detection')
-                print(detections)
+                # print('detection')
+                # print(detections)
 
                 rect_detections = []
                 for i in np.arange(0, detections.shape[2]):
@@ -298,111 +310,82 @@ class PeopleCounter():
                         if idx != self.person_class_ID:
                             continue
 
-                        box = detections[0, 0, i, 3:7] * np.array([D-C, B-A, D-C, B-A])
+                        box = detections[0, 0, i, 3:7] * np.array([D - C, B - A, D - C, B - A])
 
                         # tmp_rect = box.astype("int") + np.array([startX, startY, startX, startY])
                         tmp_rect = box.astype("int") + np.array([C, A, C, A])
 
                         rect_detections.append(tmp_rect)
                         del tmp_rect
+                updated = False
+                for i, r in enumerate(rect_detections):
+                    c = self.find_center(r)
+                    r0 = calc_r(this_person.getRect())
+                    print('rect', this_person.getRect)
+                    print('r0', r0)
+                    print('c', c)
+                    input()
+                    if c[0] in range(r0[0], r0[2]) and c[1] in range(r0[1], r0[3]):
+                        this_person.updateCoords(c[0], c[1], r, frame_id)
+                        updated = True
+                        # del rect_detections[i]
+                    else:
+                        for temp_person in temp:
+                            r0 = calc_r(temp_person.getRect())
+                            if c[0] in range(r0[0], r0[2]) and c[1] in range(r0[1], r0[3]):
+                                temp_person.updateCoords(c[0], c[1], r, frame_id)
+                                # del rect_detections[i]
+                                temp.remove(temp_person)
+                                break
+                        else:  # else ths for (dld an den brei kanena allo na tairiazei
+                            if min([dist(c, (_.getX(), _.getY())) for _ in temp]) > self.dist_thress:
+                                p = Person.MyPerson(pid, c[0], c[1], self.line_down, self.line_up, self.down_limit,
+                                                    self.up_limit, r, frame_id=frame_id)
+                                to_append.append(p)
+                                pid += 1
 
-                to_append = [] # isws na xreiastei na bgei eksw apo tis loops
-                if len(rect_detections):
-                    if len(rect_detections) > 1:
-                        for r0 in rect_detections:
-                            # c0 = int((r0[2] - r0[0]) / 2), int((r0[3] - r0[1] / 2))
-                            c0 = self.find_center(r0)
-                            rect_detections_0 = rect_detections.copy()
-                            rect_detections_0.remove(r0)
-                            for r1 in rect_detections_0:
-                                c1 = self.find_center(r1)
-                                if dist(c0, c1) > self.dist_thress:
-                                    if dist(c0, cntr) < dist(c1, cntr):
-                                        rect_detections.remove(r1)
-                                    else:
-                                        rect_detections.remove(r0)
-                        if len(rect_detections) > 1:
-                            for r0 in rect_detections:
-                                c0 = self.find_center(r0)
-                                rect_detections_0 = rect_detections.copy()
-                                rect_detections_0.remove(r0)
-                                for r1 in rect_detections_0:
-                                    c1 = self.find_center(r1)
-                                    if dist(c0, cntr) < dist(c1, cntr):
-                                        this_person.updateCoords(c0[0], c0[1], r0, frame_id)
-                                        p = Person.MyPerson(pid, c1[0], c1[1], self.line_down, self.line_up, self.down_limit,
-                                                            self.up_limit, r1, frame_id=frame_id)
-                                        to_append.append(p)
-                                        pid+=1
-                                    else:
-                                        this_person.updateCoords(c1[0], c1[1], r1, frame_id)
-                                        p = Person.MyPerson(pid, c0[0], c0[1], self.line_down, self.line_up, self.down_limit,
-                                                            self.up_limit, r0, frame_id=frame_id)
-                                        to_append.append(p)
-                                        pid += 1
-
-                                    tmp_m = temp_mask[r0[1]-startY:r0[4]-startY, r0[0]-startX:r0[3]-startX]
-                                    contours0, hierarchy = cv2.findContours(tmp_m, cv2.RETR_EXTERNAL,
-                                                                            cv2.CHAIN_APPROX_SIMPLE)
-                                    for cnt in contours0:
-                                        tmp_m = cv2.fillPoly(tmp_m, [cnt], (0, 0, 0))
-                                    temp_mask[r0[1]-startY:r0[4]-startY, r0[0]-startX:r0[3]-startX] = tmp_m
-
-                                    tmp_m = temp_mask[r1[1]-startY:r1[4]-startY, r1[0]-startX:r1[3]-startX]
-                                    contours0, hierarchy = cv2.findContours(tmp_m, cv2.RETR_EXTERNAL,
-                                                                            cv2.CHAIN_APPROX_SIMPLE)
-                                    for cnt in contours0:
-                                        tmp_m = cv2.fillPoly(tmp_m, [cnt], (0, 0, 0))
-                                    temp_mask[r1[1]-startY:r1[4]-startY, r1[0]-startX:r1[3]-startX] = tmp_m
-                                    rect_detections.remove(r0)
-                                    rect_detections.remove(r1)
-                                    break
-
-                    if len(rect_detections) == 1:
-                        print('one person found')
-                        print(this_person.getId())
-                        r0 = rect_detections[0]
-                        c0 = self.find_center(r0)
-                        this_person.updateCoords(c0[0], c0[1], r0, frame_id)
-                        # TODO na afairethoun ta A B C D tou
-                        tmp_m = temp_mask[r0[1]-startY:r0[4]-startY, r0[0]-startX:r0[3]-startX]
-                        contours0, hierarchy = cv2.findContours(tmp_m, cv2.RETR_EXTERNAL,
-                                                                cv2.CHAIN_APPROX_SIMPLE)
-                        for cnt in contours0:
-                            tmp_m = cv2.fillPoly(tmp_m, [cnt], (0, 0, 0))
-                        temp_mask[r0[1]-startY:r0[4]-startY, r0[0]-startX:r0[3]-startX] = tmp_m
-                        #     if dist(c0, c1) > self.dist_thress:
-                else:
-                    this_person.forced_move()
-                    # TODO na doume an prepei
-                    r0 = this_person.getRect()
-                    tmp_m = temp_mask[r0[1]-startY:r0[4]-startY, r0[0]-startX:r0[3]-startX]
+                    tmp_m = temp_mask[r[1] - A:r[2] - A, r[0] - C:r[3] - C]
                     contours0, hierarchy = cv2.findContours(tmp_m, cv2.RETR_EXTERNAL,
                                                             cv2.CHAIN_APPROX_SIMPLE)
                     for cnt in contours0:
                         tmp_m = cv2.fillPoly(tmp_m, [cnt], (0, 0, 0))
-                    temp_mask[r0[1]-startY:r0[4]-startY, r0[0]-startX:r0[3]-startX] = tmp_m
-                people += to_append
-                mask2[A: B, C: D] = temp_mask
+                    temp_mask[r[1] - A:r[2] - A, r[0] - C:r[3] - C] = tmp_m
 
-            # print('people: ', len(people))
-            # cv2.imshow('mask', mask2)
-            contours0, hierarchy = cv2.findContours(mask2, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                if not updated:
+                    this_person.forced_move()
+
+                mask2[A: B, C: D] = temp_mask
+            people += to_append.copy()
             to_append = []
-            count_new = 0
+
+            for this_person in people:
+                if this_person.is_done():
+                    if not this_person.is_counted():
+                        self.update_Log(this_person)
+                if frame_id > this_person.get_frame_id() + this_person.getMaxAge():
+                    people.remove(this_person)
+                else:
+                    font = cv2.FONT_HERSHEY_SIMPLEX
+                    cv2.circle(output_frame, (this_person.getX(), this_person.getY()), 3, (0, 0, 255), -1)
+                    cv2.putText(output_frame, str(this_person.getId()), (this_person.getX(), this_person.getY()),
+                                font, 1, this_person.getRGB(), 1, cv2.LINE_AA)
+                    R = this_person.getRect()
+                    if this_person.getDir() == self.IN_DIRECTION:
+                        output_frame = cv2.rectangle(output_frame, (R[0], R[1]), (R[2], R[3]), (0, 255, 0), 2)
+                    else:
+                        output_frame = cv2.rectangle(output_frame, (R[0], R[1]), (R[2], R[3]), (0, 0, 255), 2)
+
+            # ----------------------------------------------------------------------------------------------------------
+            contours0, hierarchy = cv2.findContours(mask2, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             for cnt in contours0:
                 cnt_area = cv2.contourArea(cnt)
                 if cnt_area > self.THRESSHOLD_AREA:
-
-                    # M = cv2.moments(cnt)
-                    # cx = int(M['m10'] / M['m00'])
-                    # cy = int(M['m01'] / M['m00'])
                     x, y, w, h = cv2.boundingRect(cnt)
-                    startX ,startY , endX, endY = x, y, x+w, y+h
+                    startX, startY, endX, endY = x, y, x + w, y + h
                     cntr = self.find_center((startX, startY, endX, endY))
                     # print(cntr)
-                    Xlen = (endX - startX) * 1.1#self.mtp
-                    Ylen = (endY - startY) * 1.1#self.mtp
+                    Xlen = (endX - startX) * 1.1  # self.mtp
+                    Ylen = (endY - startY) * 1.1  # self.mtp
                     # Xlen = w * mtp
                     # Ylen = h * mtp
                     xExtra = int(Xlen / 2)
@@ -425,6 +408,7 @@ class PeopleCounter():
                     temp_frame = frame[A: B, C: D]
                     blob = cv2.dnn.blobFromImage(temp_frame, 0.007843, (D - C, B - A), 127.5)
                     self.net.setInput(blob)
+
                     detections = self.net.forward()
 
                     rect_detections = []
@@ -446,146 +430,17 @@ class PeopleCounter():
                             rect_detections.append(tmp_rect)
                             del tmp_rect
 
+                    for r in rect_detections:
+                        c = self.find_center(r)
+                        if not any([c[0] in range(p.getRect()[0], p.getRect()[2]) and c[1] in range(p.getRect()[1],
+                                                                                                    p.getRect()[3]) for
+                                    p in people + to_append]):
+                            p = Person.MyPerson(pid, c[0], c[1], self.line_down, self.line_up, self.down_limit,
+                                                self.up_limit, r, frame_id=frame_id)
+                            to_append.append(p)
+                            pid += 1
 
-                    if len(rect_detections):
-                        if len(rect_detections) > 1:
-                            for r0 in rect_detections:
-                                c0 = self.find_center(r0)
-                                rect_detections_0 = rect_detections.copy()
-                                rect_detections_0.remove(r0)
-                                for r1 in rect_detections_0:
-                                    c1 = self.find_center(r1)
-                                    self.find_center(r1)
-                                    if dist(c0, c1) > self.dist_thress:
-                                        if dist(c0, cntr) < dist(c1, cntr):
-                                            print('--------------------------')
-                                            print('--------------------------')
-                                            print(type(r1))
-                                            # print(np.array(r1))
-                                            print(rect_detections)
-                                            print(r0)
-                                            print(np.array(r1) in rect_detections)
-                                            print(np.array(r1) in rect_detections)
-                                            rect_detections.remove(r1)
-                                        #     TODO na dw pti tha kanw gia na mhn svhsw kapoion pou uparxei hdh
-                                        else:
-                                            rect_detections.remove(r0)
-                            if len(rect_detections) > 1:
-                                print('+2')
-                                for r0 in rect_detections:
-                                    c0 = self.find_center(r0)
-                                    rect_detections_0 = rect_detections.copy()
-                                    rect_detections_0.remove(r0)
-                                    for r1 in rect_detections_0:
-                                        c1 = self.find_center(r1)
-                                        p = Person.MyPerson(pid, c1[0], c1[1], self.line_down, self.line_up,
-                                                            self.down_limit,
-                                                            self.up_limit, r1, frame_id=frame_id)
-                                        to_append.append(p)
-                                        pid += 1
-                                        p = Person.MyPerson(pid, c0[0], c0[1], self.line_down, self.line_up,
-                                                            self.down_limit,
-                                                            self.up_limit, r0, frame_id=frame_id)
-                                        to_append.append(p)
-                                        pid += 1
-                                        tmp_m = temp_mask[r0[1] - startY:r0[4] - startY, r0[0] - startX:r0[3] - startX]
-                                        contours0, hierarchy = cv2.findContours(tmp_m, cv2.RETR_EXTERNAL,
-                                                                                cv2.CHAIN_APPROX_SIMPLE)
-                                        for cnt in contours0:
-                                            tmp_m = cv2.fillPoly(tmp_m, [cnt], (0, 0, 0))
-                                        temp_mask[r0[1] - startY:r0[4] - startY, r0[0] - startX:r0[3] - startX] = tmp_m
-
-                                        tmp_m = temp_mask[r1[1] - startY:r1[4] - startY, r1[0] - startX:r1[3] - startX]
-                                        contours0, hierarchy = cv2.findContours(tmp_m, cv2.RETR_EXTERNAL,
-                                                                                cv2.CHAIN_APPROX_SIMPLE)
-                                        for cnt in contours0:
-                                            tmp_m = cv2.fillPoly(tmp_m, [cnt], (0, 0, 0))
-                                        temp_mask[r1[1] - startY:r1[4] - startY, r1[0] - startX:r1[3] - startX] = tmp_m
-                                        rect_detections.remove(r0)
-                                        rect_detections.remove(r1)
-                                        break
-                        if len(rect_detections) == 1:
-
-                            r0 = rect_detections[0]
-                            c0 = self.find_center(r0)
-                            if to_append or people:
-                                existed_people_counter = np.array([np.array([p.getX(), p.getY()]) for p in people])
-                                to_append_centers = np.array([np.array([p.getX(), p.getY()]) for p in to_append])
-                                # print(existed_people_counter, to_append_centers)
-                                # print(people)
-                                if len(existed_people_counter) and len(to_append_centers):
-                                    people_centers = np.concatenate((existed_people_counter, to_append_centers))
-                                elif len(existed_people_counter) and not len(to_append_centers):
-                                    people_centers = existed_people_counter
-                                elif not len(existed_people_counter) and len(to_append_centers):
-                                    people_centers = to_append_centers
-                                print(people_centers.transpose())
-                                print(c0)
-                                print('++1')
-                                if not (any([px in people_centers.transpose()[0] for px in range(c0[0]-10,c0[0]+10)])
-                                        and any([py in people_centers.transpose()[1] for py in range(c0[1]-10,c0[1]+10)])):
-                                    p = Person.MyPerson(pid, c0[0], c0[1], self.line_down, self.line_up, self.down_limit,
-                                                        self.up_limit, r0, frame_id=frame_id)
-                                    to_append.append(p)
-                                    pid += 1
-                            else:
-                                print('+1')
-                                p = Person.MyPerson(pid, c0[0], c0[1], self.line_down, self.line_up, self.down_limit,
-                                                    self.up_limit, r0, frame_id=frame_id)
-                                to_append.append(p)
-                                pid += 1
-
-                people += to_append
-            # output_frame = frame.copy()
-            # self.Vwidth, self.Vheight
-            for x in range(0, self.Vwidth - 1, 10):
-                cv2.line(output_frame, (x, 0), (x, self.Vheight), (255, 0, 0), 1, 1)
-            for y in range(0, self.Vheight - 1, 10):
-                cv2.line(output_frame, (0, y), (self.Vwidth,y ), (255, 0, 0), 1, 1)
-            for this_person in people:
-                if this_person.is_done():
-                    if not this_person.is_counted():
-                        self.update_Log(this_person)
-                elif frame_id > this_person.get_frame_id() + this_person.getMaxAge():
-                    people.remove(this_person)
-                else:
-                    font = cv2.FONT_HERSHEY_SIMPLEX
-                    cv2.circle(output_frame, (this_person.getX(), this_person.getY()), 3, (0, 0, 255), -1)
-                    cv2.putText(output_frame, str(this_person.getId()), (this_person.getX(), this_person.getY()),
-                                font, 1, this_person.getRGB(), 1, cv2.LINE_AA)
-                    R = this_person.getRect()
-                    if this_person.getDir() == self.IN_DIRECTION:
-                        output_frame = cv2.rectangle(output_frame, (R[0], R[1]), (R[2], R[3]), (0, 255, 0), 2)
-                    else:
-                        output_frame = cv2.rectangle(output_frame, (R[0], R[1]), (R[2], R[3]), (0, 0, 255), 2)
-                    # del R
-                    # print(len(people))
-                    # print(this_person.getId())
-                    # print(this_person.getX(), this_person.getY())
-                    # print(this_person.getRect())
-                    # cen = self.find_center(R)
-                    # print(cen)
-                    # cv2.circle(output_frame, (cen[0], cen[1]), 3, (0, 255, 255), -1)
-                    # input()
-                    # if cy in range(self.up_limit, self.down_limit):
-                    #     if not any([p.getRect()[0] < cx < p.getRect()[0] + p.getRect()[2] and p.getRect()[1] < cy <
-                    #                 p.getRect()[1] + p.getRect()[3] for p in people]):
-                    #         p = Person.MyPerson(pid, cx, cy, self.line_down, self.line_up, self.down_limit,
-                    #                             self.up_limit, rect, frame_id=frame_id)
-                    #         # p.getId()
-                    #         people.append(p)
-                    #         pid += 1
-                    #         # curr_dir = None
-                    #         count_new += 1
-                    #         cv2.circle(output_frame, (cx, cy), 5, (0, 0, 255), -1)
-                # print('curr_dir == self.IN_DIRECTION')
-                # print(self.IN_DIRECTION)
-                # print(curr_dir)
-                #     if curr_dir == None:
-                #         # frame = cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
-                #         pass
-
-                # cv.drawContours(frame, cnt, -1, (0,255,0), 3)
+            people += to_append
 
             self.open_live_monitor(output_frame, people)
             # cv.imshow('Mask', mask)
