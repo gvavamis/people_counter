@@ -6,7 +6,7 @@ import math
 class MyPerson:
     tracks = []
 
-    def __init__(self, i, xi, yi, line_down, line_up, down_limit, up_limit, rect=None, frame_id=None, max_age=50):
+    def __init__(self, i, xi, yi, middle_line, down_limit, up_limit, rect=None, frame_id=None, max_age=10):
         if frame_id:
             self.frame_id = frame_id
         if rect is None:
@@ -16,8 +16,7 @@ class MyPerson:
 
         self.down_limit = down_limit
         self.up_limit = up_limit
-        self.line_down = line_down
-        self.line_up = line_up
+        self.middle_line = middle_line
         self.i = i
         self.x = xi
         self.y = yi
@@ -43,8 +42,8 @@ class MyPerson:
     def getMaxAge(self):
         return self.max_age
 
-    def is_done(self):
-        return self.done
+    # def is_done(self):
+    #     return self.done
 
     def is_counted(self):
         return self.counted
@@ -52,9 +51,8 @@ class MyPerson:
     def set_counted(self):
         self.counted = True
 
-    # def getIfReadyToDelete(self):
-    #     return self.ready_to_delete
-
+    def get_tracks_len(self):
+        return len(self.tracks)
 
     def getDir(self):
         return self.dir
@@ -71,8 +69,43 @@ class MyPerson:
     def get_frame_id(self):
         return self.frame_id
 
+    def is_done(self):
+        if self.age > self.max_age:
+            self.done = True
+            if len(self.tracks) > 2:
+                if self.tracks[-1][1] <= self.middle_line < self.tracks[0][1]:
+                    self.dir = 'U'
+                    return 'count'
+                elif self.tracks[-1][1] >= self.middle_line > self.tracks[0][1]:
+                    self.dir = 'D'
+                    return 'count'
+                else:
+                    return 'delete'
+            else:
+                return 'delete'
+        elif len(self.tracks) > 2 and self.getY() >= self.down_limit:
+            if self.dir == 'D':
+                return 'count'
+            else:
+                return 'delete'
+        elif len(self.tracks) > 2 and self.getY() <= self.up_limit:
+            if self.dir == 'U':
+                return 'count'
+            else:
+                return 'delete'
+        else:
+            return None
+
+    def inc_age(self):
+        self.age += 1
+        return self.is_done()
+
+    # def getIfReadyToDelete(self):
+    #     return self.ready_to_delete
+
+
     def updateCoords(self, xn, yn, rect, frame_id=None):
-        print('update: ', self.getId())
+        # print('update: ', self.getId())
         if frame_id:
             self.frame_id = frame_id
 
@@ -85,11 +118,15 @@ class MyPerson:
         self.y = yn
 
         if len(self.tracks) >= 2:
-            if self.tracks[-1][1] < self.line_down <= self.tracks[-2][1]:
-                self.dir = 'U'
-
-            elif self.tracks[-1][1] > self.line_up >= self.tracks[-2][1]:
+            if self.tracks[-1][1] - self.tracks[0][1] > 0:
                 self.dir = 'D'
+            elif self.tracks[-1][1] - self.tracks[0][1] < 0:
+                self.dir = 'U'
+            # if self.tracks[-1][1] <= self.middle_line < self.tracks[0][1]:
+            #     self.dir = 'U'
+            #
+            # elif self.tracks[-1][1] >= self.middle_line > self.tracks[0][1]:
+            #     self.dir = 'D'
 
         # print(self.getId())
         # print(self.dir)
@@ -116,19 +153,11 @@ class MyPerson:
                 self.done = True
 
 
-
-    def age_one(self):
-        self.age += 1
-        # if self.age > self.max_age:
-            # self.done = True
-        return
-
     # def dist(self, A, B):
     #     return math.sqrt((A[0] - B[0]) ** 2 + (A[1] - B[1]) ** 2)
 
     def forced_move(self):
-        print('FORCED_MOVE   ', self.getId())
-        if len(self.tracks) >=  2:
+        if len(self.tracks) >= 2:
             tmp = [(tracks0, tracks1) for tracks0, tracks1 in zip(self.tracks[-10:], self.tracks[-9:])]
             # print(tmp)
             tmpdis = [(_[1][0] - _[0][0], _[1][1] - _[0][1]) for _ in tmp]
@@ -152,6 +181,7 @@ class MyPerson:
                     new_rect = self.rect[0]-abs(stepX), self.rect[1]-abs(stepY), self.rect[2]-abs(stepX), self.rect[3]-abs(stepY)
         # else:
         #     new_rect = self.rect
+        print('FORCED_MOVE   ', self.getId(), 'old: ', self.x, self.y, 'setpX: ', stepX,'setpX: ',stepY, ' tracksLen: ', self.get_tracks_len())
         self.updateCoords(self.x+stepX, self.y+stepY, new_rect)
 
 
