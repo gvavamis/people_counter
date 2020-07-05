@@ -101,7 +101,7 @@ class PeopleCounter():
         # print(self.down_limit)
         # input()
         #
-        self.line_limit_down_color = (255, 0, 0)
+        self.line_limit_down_color = (0, 255, 0)
         self.line_limit_up_color = (0, 0, 255)
         self.line_middle_color = (255, 255, 255)
 
@@ -136,8 +136,6 @@ class PeopleCounter():
         self.middle_line = int(5 * (self.Vheight / 10))  # +self.ofset
         self.down_limit = int(6 * (self.Vheight / 10))  # +self.ofset
         return cv2.resize(frame, (0, 0), fx=self.w_resize, fy=self.h_resize)
-
-
 
     def update_Log(self, this_person):
         direction = this_person.getDir()
@@ -185,9 +183,9 @@ class PeopleCounter():
             people_in_now_str = 'now in: ' + str(self.people_in)
 
             cv2.putText(image, total_in_str, (10, 40), font, 0.5, (255, 255, 255), 2, cv2.LINE_AA)
-            cv2.putText(image, total_in_str, (10, 40), font, 0.5, (0, 0, 255), 1, cv2.LINE_AA)
+            cv2.putText(image, total_in_str, (10, 40), font, 0.5, (0, 255, 0), 1, cv2.LINE_AA)
             cv2.putText(image, total_out_str, (10, 90), font, 0.5, (255, 255, 255), 2, cv2.LINE_AA)
-            cv2.putText(image, total_out_str, (10, 90), font, 0.5, (255, 0, 0), 1, cv2.LINE_AA)
+            cv2.putText(image, total_out_str, (10, 90), font, 0.5, (0, 0, 255), 1, cv2.LINE_AA)
             cv2.putText(image, people_in_now_str, (10, 140), font, 0.5, (255, 255, 255), 2, cv2.LINE_AA)
             cv2.putText(image, people_in_now_str, (10, 140), font, 0.5, (255, 0, 0), 1, cv2.LINE_AA)
 
@@ -217,7 +215,7 @@ class PeopleCounter():
         frame_id = 0
         while self.CAP.isOpened():
             # print('%%%%%%%%%%%%%%%%%')
-            print('frame: ', frame_id)
+            # print('frame: ', frame_id)
             to_remove = []
             ret, frame = self.CAP.read()
             if frame is None:
@@ -261,8 +259,8 @@ class PeopleCounter():
                 this_person = temp.pop()
                 to_append = []
                 # print(this_person.is_done())
-                if this_person.is_done():
-                    continue
+                # if this_person.is_done() == 'delete':
+                #     continue
                 # for this_person in people:
 
                 startX, startY, endX, endY = this_person.getRect()
@@ -293,11 +291,14 @@ class PeopleCounter():
 
                 temp_mask = mask2[A: B, C: D]
                 temp_frame = frame[A: B, C: D]
-                cv2.imshow('temp_frame', temp_frame)
-                k = cv2.waitKey(30) & 0xff
-                if k == ord('c'):
-                    cv2.destroyWindow(temp_frame)
+
+                # cv2.imshow('temp_frame', temp_frame)
+                # k = cv2.waitKey(30) & 0xff
+                # if k == ord('c'):
+                #     cv2.destroyWindow(temp_frame)
+
                 output_frame = cv2.rectangle(output_frame, (C, A), (D, B), (0, 255, 255), 2)
+
                 blob = cv2.dnn.blobFromImage(temp_frame, 0.007843, (D - C, B - A), 127.5)
                 # blob = cv2.dnn.blobFromImage(temp_frame, 0.007843, (D-C, B-A), 127.5)
                 self.net.setInput(blob)
@@ -324,7 +325,7 @@ class PeopleCounter():
                         rect_detections.append(tmp_rect)
                         del tmp_rect
                 updated = False
-                print('len(rect_detections)', len(rect_detections))
+                # print('len(rect_detections)', len(rect_detections))
                 for i, r in enumerate(rect_detections):
                     c = self.find_center(r)
                     r0 = calc_r(this_person.getRect())
@@ -336,38 +337,42 @@ class PeopleCounter():
                     closer_dist = min([dist(c, (_.getX(), _.getY())) for _ in temp]) if len(temp) else None
                     if c[0] in range(r0[0], r0[2]) and c[1] in range(r0[1], r0[3]):
                         if len(rect_detections) == 1:
-                            this_person.updateCoords(c[0], c[1], r, frame_id)
+                            this_person.updateCoords(c[0], c[1], r)
+                            print('UPDATE_0 : ', this_person.getId(), 'age: ', this_person.get_age(),
+                                  'status: ', this_person.get_status())
                             updated = True
                         else:
                             this_person_dist = dist(c, (this_person.getX(), this_person.getY()))
                             if closer_dist and closer_dist < this_person_dist:
                                 canditade_person = None
                                 for temp_person in temp:
-                                    if dist(c, (temp_person.getX(), temp_person.getY()))< this_person_dist:
+                                    if dist(c, (temp_person.getX(), temp_person.getY())) < this_person_dist:
                                         canditade_person = temp_person
                                         break
                                 if canditade_person is not None:
-                                    if this_person.get_tracks_len()> canditade_person.get_tracks_len():
-                                        this_person.updateCoords(c[0], c[1], r, frame_id)
-                                        print('UPDATE : ', this_person.getId())
+                                    if this_person.get_tracks_len() > canditade_person.get_tracks_len():
+                                        this_person.updateCoords(c[0], c[1], r)
+                                        print('UPDATE_1 : ', this_person.getId(), 'age:', this_person.get_age(),
+                                              'status: ', this_person.get_status())
                                         updated = True
                                     else:
-                                        canditade_person.updateCoords(c[0], c[1], r, frame_id)
+                                        canditade_person.updateCoords(c[0], c[1], r)
                         # del rect_detections[i]
                     else:
                         for temp_person in temp:
                             r0 = calc_r(temp_person.getRect())
                             if c[0] in range(r0[0], r0[2]) and c[1] in range(r0[1], r0[3]):
-                                temp_person.updateCoords(c[0], c[1], r, frame_id)
-                                print('UPDATE : ', this_person.getId(), ' DELETED: ', temp_person.getId())
+                                temp_person.updateCoords(c[0], c[1], r)
+                                print('UPDATE : ', this_person.getId(), ' DELETED: ', temp_person.getId(), )
                                 # del rect_detections[i]
                                 temp.remove(temp_person)
                                 break
                         else:  # else ths for (dld an den brei kanena allo na tairiazei
                             if closer_dist:
                                 if closer_dist > self.dist_thress:
-                                    p = Person.MyPerson(pid, c[0], c[1], self.middle_line, self.down_limit, self.up_limit,
-                                                        r, frame_id=frame_id)
+                                    p = Person.MyPerson(pid, c[0], c[1], self.middle_line, self.down_limit,
+                                                        self.up_limit,
+                                                        r)
                                     to_append.append(p)
                                     pid += 1
 
@@ -380,7 +385,7 @@ class PeopleCounter():
 
                 if not updated:
                     this_person.forced_move()
-                    print('FORCED_MOVE   ', this_person.getId())
+                    # print('FORCED_MOVE   ', this_person.getId())
 
                 mask2[A: B, C: D] = temp_mask
             people += to_append.copy()
@@ -388,9 +393,11 @@ class PeopleCounter():
 
             for this_person in people:
                 font = cv2.FONT_HERSHEY_SIMPLEX
-                cv2.putText(output_frame, str(this_person.getId()), (this_person.getRect()[0], this_person.getRect()[1]),
-                        font, 0.5, (255, 0, 255), 1, cv2.LINE_AA)
+                cv2.putText(output_frame, str(this_person.getId()),
+                            (this_person.getRect()[0], this_person.getRect()[1]),
+                            font, 0.5, (255, 0, 255), 1, cv2.LINE_AA)
                 cv2.circle(output_frame, (this_person.getX(), this_person.getY()), 5, (0, 0, 255), -1)
+                # result = this_person.get_status()
                 result = this_person.is_done()
                 if result == 'count':
                     self.update_Log(this_person)
@@ -430,7 +437,7 @@ class PeopleCounter():
                     x, y, w, h = cv2.boundingRect(cnt)
                     startX, startY, endX, endY = x, y, x + w, y + h
                     cntr = self.find_center((startX, startY, endX, endY))
-                    if self.up_limit< cntr[1] <self.down_limit:
+                    if self.up_limit < cntr[1] < self.down_limit:
                         # print(cntr)
                         Xlen = (endX - startX) * 1.1  # self.mtp
                         Ylen = (endY - startY) * 1.1  # self.mtp
@@ -481,9 +488,10 @@ class PeopleCounter():
                         for r in rect_detections:
                             c = self.find_center(r)
                             if not any([c[0] in range(calc_r(p.getRect())[0], calc_r(p.getRect())[2]) and c[1] in
-                                        range(calc_r(p.getRect())[1], calc_r(p.getRect())[3]) for p in people + to_append]):
+                                        range(calc_r(p.getRect())[1], calc_r(p.getRect())[3]) for p in
+                                        people + to_append]):
                                 p = Person.MyPerson(pid, c[0], c[1], self.middle_line, self.down_limit, self.up_limit,
-                                                    r, frame_id=frame_id)
+                                                    r)
                                 to_append.append(p)
                                 pid += 1
 
@@ -510,5 +518,6 @@ class PeopleCounter():
 if __name__ == '__main__':
     # people_counter = PeopleCounter(cap='test_videos\\0001.mp4', upper_padding=0.5)
     # people_counter = PeopleCounter(cap='test_videos\\TestVideo.avi', upper_padding=0.5)
-    people_counter = PeopleCounter(cap='test_videos\\TestVideo.avi', upper_padding=0.5)
+    # people_counter = PeopleCounter(cap='test_videos\\TestVideo.avi', upper_padding=0.5)
+    people_counter = PeopleCounter(cap='test_videos\\0002.mp4', upper_padding=0.5)
     people_counter.run()
