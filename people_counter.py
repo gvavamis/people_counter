@@ -518,6 +518,6 @@ class PeopleCounter():
 if __name__ == '__main__':
     # people_counter = PeopleCounter(cap='test_videos\\0001.mp4', upper_padding=0.5)
     # people_counter = PeopleCounter(cap='test_videos\\TestVideo.avi', upper_padding=0.5)
-    # people_counter = PeopleCounter(cap='test_videos\\TestVideo.avi', upper_padding=0.5)
-    people_counter = PeopleCounter(cap='test_videos\\0002.mp4', upper_padding=0.5)
+    people_counter = PeopleCounter(cap='test_videos\\TestVideo.avi', upper_padding=0.5)
+    # people_counter = PeopleCounter(cap='test_videos\\0002.mp4', upper_padding=0.5)
     people_counter.run()
